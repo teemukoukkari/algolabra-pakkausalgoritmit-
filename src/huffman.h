@@ -1,6 +1,8 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include "util.h"
+
 typedef struct huffman_freqs {
     uint64_t arr[256];
 } huffman_freqs;
@@ -31,3 +33,11 @@ huffman_node huffman_heap_pop(huffman_heap *heap);
 huffman_freqs huffman_read_frequencies(FILE *f);
 huffman_node huffman_create_tree(const huffman_freqs *freqs);
 huffman_codes huffman_find_codes(huffman_node tree);
+void huffman_write_tree(huffman_node tree, bitwriter *writer);
+size_t huffman_write_data(FILE *file, huffman_codes *codes, bitwriter *writer);
+void huffman_encode(FILE *in, FILE *out);
+
+huffman_node huffman_read_tree(bitreader *reader);
+uint8_t huffman_tree_get(huffman_node tree, uint32_t code, uint8_t *depth);
+void huffman_decode_data(FILE *out_file, uint64_t byte_count, huffman_node tree, bitreader *reader);
+void huffman_decode(FILE *in_file, FILE *out_file);

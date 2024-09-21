@@ -2,7 +2,8 @@
 MAIN_FILE=src/main.c
 
 SRC_FILES=\
-	src/huffman.c
+	src/huffman.c \
+	src/util.c
 
 TEST_FILES=\
 	test/unity/unity.c \
