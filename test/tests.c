@@ -1,30 +1,29 @@
-#include "unity/unity.h"
-#include "../src/huffman.h"
-#include "unity/unity_internals.h"
-
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <memory.h>
 
-const huffman_freqs SAMPLE_FREQS = {
-    .arr = {
-        0, 1, 1, 2, 1, 3, 1, 0, 0, 1, 3, 0, 0, 1, 0, 2, 
-        0, 2, 1, 1, 0, 0, 2, 1, 0, 0, 3, 0, 0, 1, 1, 0, 
-        2, 2, 1, 0, 0, 1, 2, 1, 3, 2, 0, 2, 1, 0, 2, 0, 
-        2, 0, 0, 2, 1, 2, 2, 2, 0, 2, 1, 0, 0, 1, 2, 3, 
-        1, 1, 1, 0, 1, 0, 1, 0, 0, 1, 1, 0, 2, 0, 1, 1, 
-        2, 0, 0, 1, 1, 2, 1, 1, 2, 2, 1, 2, 0, 1, 2, 2, 
-        0, 0, 0, 0, 0, 1, 1, 2, 3, 2, 1, 1, 0, 1, 1, 2, 
-        0, 5, 0, 1, 1, 1, 0, 0, 2, 0, 1, 0, 3, 1, 1, 2, 
-        0, 3, 0, 0, 1, 1, 1, 1, 0, 0, 1, 0, 1, 1, 0, 2, 
-        0, 1, 1, 2, 1, 0, 1, 2, 0, 0, 0, 1, 2, 0, 1, 0, 
-        3, 1, 0, 3, 0, 1, 1, 0, 2, 1, 1, 2, 0, 2, 1, 2, 
-        2, 3, 1, 0, 1, 2, 1, 0, 1, 1, 0, 0, 1, 0, 0, 0, 
-        3, 0, 0, 4, 1, 1, 1, 0, 2, 4, 5, 0, 2, 1, 2, 1, 
-        1, 2, 1, 0, 0, 1, 3, 0, 0, 1, 0, 3, 0, 1, 0, 0, 
-        1, 1, 0, 1, 2, 1, 0, 2, 1, 1, 0, 0, 1, 2, 0, 1, 
-        0, 2, 1, 0, 1, 1, 1, 0, 1, 0, 0, 1, 1, 4, 0, 1
-    }
+#include "unity/unity.h"
+#include "unity/unity_internals.h"
+#include "../src/huffman.h"
+
+uint64_t SAMPLE_FREQS[256] = {
+    0, 1, 1, 2, 1, 3, 1, 0, 0, 1, 3, 0, 0, 1, 0, 2, 
+    0, 2, 1, 1, 0, 0, 2, 1, 0, 0, 3, 0, 0, 1, 1, 0, 
+    2, 2, 1, 0, 0, 1, 2, 1, 3, 2, 0, 2, 1, 0, 2, 0, 
+    2, 0, 0, 2, 1, 2, 2, 2, 0, 2, 1, 0, 0, 1, 2, 3, 
+    1, 1, 1, 0, 1, 0, 1, 0, 0, 1, 1, 0, 2, 0, 1, 1, 
+    2, 0, 0, 1, 1, 2, 1, 1, 2, 2, 1, 2, 0, 1, 2, 2, 
+    0, 0, 0, 0, 0, 1, 1, 2, 3, 2, 1, 1, 0, 1, 1, 2, 
+    0, 5, 0, 1, 1, 1, 0, 0, 2, 0, 1, 0, 3, 1, 1, 2, 
+    0, 3, 0, 0, 1, 1, 1, 1, 0, 0, 1, 0, 1, 1, 0, 2, 
+    0, 1, 1, 2, 1, 0, 1, 2, 0, 0, 0, 1, 2, 0, 1, 0, 
+    3, 1, 0, 3, 0, 1, 1, 0, 2, 1, 1, 2, 0, 2, 1, 2, 
+    2, 3, 1, 0, 1, 2, 1, 0, 1, 1, 0, 0, 1, 0, 0, 0, 
+    3, 0, 0, 4, 1, 1, 1, 0, 2, 4, 5, 0, 2, 1, 2, 1, 
+    1, 2, 1, 0, 0, 1, 3, 0, 0, 1, 0, 3, 0, 1, 0, 0, 
+    1, 1, 0, 1, 2, 1, 0, 2, 1, 1, 0, 0, 1, 2, 0, 1, 
+    0, 2, 1, 0, 1, 1, 1, 0, 1, 0, 0, 1, 1, 4, 0, 1
 };
 
 FILE* file_random_256B;
@@ -34,9 +33,9 @@ void setUp(){};
 void tearDown(){};
 
 void test_huffman_node_create() {
-    huffman_node left = malloc(sizeof(huffman_node_st));
-    huffman_node right = malloc(sizeof(huffman_node_st));
-    huffman_node node = huffman_node_create(123, 456, left, right);
+    huffman_node *left = malloc(sizeof(huffman_node));
+    huffman_node *right = malloc(sizeof(huffman_node));
+    huffman_node *node = huffman_node_create(123, 456, left, right);
     TEST_ASSERT_EQUAL_UINT8(node->byte, 123);
     TEST_ASSERT_EQUAL_UINT64(node->freq, 456);
     TEST_ASSERT_EQUAL_PTR(left, node->left);
@@ -51,7 +50,7 @@ void test_huffman_heap_insert() {
 
     uint64_t correct_sum = 0;
     for (int i = 0; i < 256; i++) {
-        huffman_node node = huffman_node_create(0, (i*123456)%654321, NULL, NULL);
+        huffman_node *node = huffman_node_create(0, (i*123456)%654321, NULL, NULL);
         correct_sum += node->freq;
         huffman_heap_insert(&heap, node);
     }
@@ -76,7 +75,7 @@ void test_huffman_heap_pop() {
 
     uint64_t correct_sum = 0;
     for (int i = 0; i < 256; i++) {
-        huffman_node node = huffman_node_create(0, (i*123456)%654321, NULL, NULL);
+        huffman_node *node = huffman_node_create(0, (i*123456)%654321, NULL, NULL);
         correct_sum += node->freq;
         huffman_heap_insert(&heap, node);
     }
@@ -84,7 +83,7 @@ void test_huffman_heap_pop() {
     uint64_t sum = 0;
     uint64_t max = 0;
     for (int i = 0; i < 256; i++) {
-        huffman_node node = huffman_heap_pop(&heap);
+        huffman_node *node = huffman_heap_pop(&heap);
         TEST_ASSERT_NOT_NULL(node);
         TEST_ASSERT_TRUE(node->freq >= max);
 
@@ -99,23 +98,28 @@ void test_huffman_heap_pop() {
 }
 
 void test_huffman_read_frequencies_256B() {
-    huffman_freqs freqs = huffman_read_frequencies(file_random_256B);
-    TEST_ASSERT_EQUAL_UINT64_ARRAY(SAMPLE_FREQS.arr, freqs.arr, 256);
+    uint64_t total;
+    uint64_t *freqs = huffman_read_frequencies(file_random_256B, &total);
+    TEST_ASSERT_EQUAL_UINT64_ARRAY(SAMPLE_FREQS, freqs, 256);
+    TEST_ASSERT_EQUAL_UINT64(256, total);
 }
 
 void test_huffman_read_frequencies_1M() {
     const uint64_t CORRECT_SUM = 1048576;
 
-    huffman_freqs freqs = huffman_read_frequencies(file_random_1M);
+    uint64_t total;
+    uint64_t *freqs = huffman_read_frequencies(file_random_1M, &total);
 
     uint64_t sum = 0;
     for (int i = 0; i < 256; i++) {
-        sum += freqs.arr[i];
+        sum += freqs[i];
     }
+
+    TEST_ASSERT_EQUAL_UINT64(total, sum);
     TEST_ASSERT_EQUAL_UINT64(CORRECT_SUM, sum);
 }
 
-static int _find_leaf_depth(huffman_node node, uint8_t leaf, int depth) {
+static int _find_leaf_depth(huffman_node *node, uint8_t leaf, int depth) {
     if (node == NULL) return 0;
     if (node->left == NULL && node->right == NULL && node->byte == leaf) return depth;
 
@@ -127,14 +131,16 @@ static int _find_leaf_depth(huffman_node node, uint8_t leaf, int depth) {
 }
 
 void test_huffman_create_tree() {
-    huffman_freqs freqs = SAMPLE_FREQS;
-    freqs.arr[213] = 50;
-    freqs.arr[142] = 40;
-    freqs.arr[189] = 30;
-    freqs.arr[23] = 20;
-    freqs.arr[96] = 10;
+    uint64_t *freqs = malloc(256*sizeof(uint64_t));
+    memcpy(freqs, SAMPLE_FREQS, 256*sizeof(uint64_t));
 
-    huffman_node tree = huffman_create_tree(&freqs);
+    freqs[213] = 50;
+    freqs[142] = 40;
+    freqs[189] = 30;
+    freqs[23] = 20;
+    freqs[96] = 10;
+
+    huffman_node *tree = huffman_create_tree(freqs);
 
     int depth1 = _find_leaf_depth(tree, 213, 0);
     int depth2 = _find_leaf_depth(tree, 142, 0);
@@ -147,21 +153,21 @@ void test_huffman_create_tree() {
     TEST_ASSERT_TRUE(depth3 <= depth4);
     TEST_ASSERT_TRUE(depth4 <= depth5);
 
-    huffman_destroy_tree(tree);
+    huffman_tree_destroy(tree);
 }
 
 void test_huffman_find_codes() {
-    huffman_node tree = huffman_create_tree(&SAMPLE_FREQS);
-    huffman_codes codes = huffman_find_codes(tree);
+    huffman_node *tree = huffman_create_tree(SAMPLE_FREQS);
+    huffman_code *codes = huffman_find_codes(tree);
 
-    TEST_ASSERT_EQUAL_INT(_find_leaf_depth(tree, 53, 0), codes.length[53]);
-    TEST_ASSERT_EQUAL_INT(_find_leaf_depth(tree, 75, 0), codes.length[75]);
-    TEST_ASSERT_EQUAL_INT(_find_leaf_depth(tree, 122, 0), codes.length[122]);
-    TEST_ASSERT_EQUAL_INT(_find_leaf_depth(tree, 175, 0), codes.length[175]);
-    TEST_ASSERT_EQUAL_INT(_find_leaf_depth(tree, 210, 0), codes.length[210]);
-    TEST_ASSERT_EQUAL_INT(_find_leaf_depth(tree, 255, 0), codes.length[255]);
+    TEST_ASSERT_EQUAL_INT(_find_leaf_depth(tree, 53, 0), codes[53].length);
+    TEST_ASSERT_EQUAL_INT(_find_leaf_depth(tree, 75, 0), codes[75].length);
+    TEST_ASSERT_EQUAL_INT(_find_leaf_depth(tree, 122, 0), codes[122].length);
+    TEST_ASSERT_EQUAL_INT(_find_leaf_depth(tree, 175, 0), codes[175].length);
+    TEST_ASSERT_EQUAL_INT(_find_leaf_depth(tree, 210, 0), codes[210].length);
+    TEST_ASSERT_EQUAL_INT(_find_leaf_depth(tree, 255, 0), codes[255].length);
     
-    huffman_destroy_tree(tree);
+    huffman_tree_destroy(tree);
 }
 
 int main() {

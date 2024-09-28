@@ -3,14 +3,17 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdbool.h>
+#include <memory.h>
 
 #include "util.h"
 
-#define BLOCK_SIZE 16384
+/*****************************************************************************/
 
-huffman_node huffman_node_create(uint8_t byte, uint64_t freq, huffman_node left, huffman_node right) {
-    huffman_node node = malloc(sizeof(huffman_node_st));
+// Luo uuden solmun annetuista tiedoista
+huffman_node *huffman_node_create(
+    uint8_t byte, uint64_t freq, huffman_node *left, huffman_node *right
+) {
+    huffman_node *node = malloc(sizeof(huffman_node));
     node->byte = byte;
     node->freq = freq;
     node->left = left;
@@ -18,18 +21,22 @@ huffman_node huffman_node_create(uint8_t byte, uint64_t freq, huffman_node left,
     return node;
 }
 
-void huffman_destroy_tree(huffman_node tree) {
+// Vapauttaa solmun ja sen lapsisolmut rekursiivisesti
+void huffman_tree_destroy(huffman_node *tree) {
     if (tree == NULL) return;
-    huffman_destroy_tree(tree->left);
-    huffman_destroy_tree(tree->right);
+    huffman_tree_destroy(tree->left);
+    huffman_tree_destroy(tree->right);
     free(tree);
 }
 
-void huffman_heap_insert(huffman_heap *heap, huffman_node node) {
+// Lisää solmun minimikekoon (freq-arvon suhteen). Aluksi solmu lisätään
+// ensimmäiselle vapaalle  paikalle, jonka jälkeen sitä nostetaan, kunnes
+// kekokoehto täyttyy. Taulukon indeksit alkavat ykkösestä.
+void huffman_heap_insert(huffman_heap *heap, huffman_node *node) {
     int k = heap->size+1;
     heap->arr[k] = node;
     while (k > 1 && heap->arr[k/2]->freq > heap->arr[k]->freq) {
-        huffman_node temp = heap->arr[k/2];
+        huffman_node *temp = heap->arr[k/2];
         heap->arr[k/2] = heap->arr[k];
         heap->arr[k] = temp;
         k /= 2;
@@ -37,8 +44,10 @@ void huffman_heap_insert(huffman_heap *heap, huffman_node node) {
     heap->size += 1;
 }
 
-huffman_node huffman_heap_pop(huffman_heap *heap) {
-    huffman_node node = heap->arr[1];
+// Palauttaa minimikeon pienimmän solmun ja poistaa sen keosta. Viimeinen
+// solmu siirretään juurisolmuksi, ja sitä lasketaan, kunnes kekoehto täyttyy.
+huffman_node *huffman_heap_pop(huffman_heap *heap) {
+    huffman_node *node = heap->arr[1];
 
     heap->arr[1] = heap->arr[heap->size];
     heap->arr[heap->size] = NULL;
@@ -56,7 +65,7 @@ huffman_node huffman_heap_pop(huffman_heap *heap) {
 
         if (min == k) break;
 
-        huffman_node temp = heap->arr[min];
+        huffman_node *temp = heap->arr[min];
         heap->arr[min] = heap->arr[k];
         heap->arr[k] = temp;
         k = min;
@@ -65,31 +74,35 @@ huffman_node huffman_heap_pop(huffman_heap *heap) {
     return node;
 }
 
+/*****************************************************************************/
 
-huffman_freqs huffman_read_frequencies(FILE* f) {
-    huffman_freqs freqs = {};
+// Lukee tiedostosta tavujen esiintymistiheydet.
+// Palauttaa 256-kohtaisen taulukon ja total-parametriin tiedostonkoon
+uint64_t *huffman_read_frequencies(FILE* file, uint64_t *total) {
+    *total = 0;
+    uint64_t *freqs = calloc(256*sizeof(uint64_t), 1);
 
-    size_t bytes_read;
-    uint8_t *buffer = malloc(BLOCK_SIZE);
-    fseek(f, 0, SEEK_SET);
-    do {
-        bytes_read = fread(buffer, 1, BLOCK_SIZE, f);
-        for (size_t i = 0; i < bytes_read; i++) {
-            freqs.arr[buffer[i]]++;
-        }
-    } while(bytes_read);
-    free(buffer);
-    
+    bytereader reader = bytereader_init(file, 0);
+    while (reader.bytes_left) {
+        freqs[bytereader_read(&reader)]++;
+        *total = *total + 1;
+    }
+    bytereader_finish(&reader);
+
     return freqs;
 }
 
-huffman_node huffman_create_tree(const huffman_freqs *freqs) {
+// Luo tavujen esiintymistiheyksien perusteella Huffmanin puun.
+// Algoritmin tomintaperiaate on seuraavalta sivulta:
+//   https://www.w3schools.com/dsa/dsa_ref_huffman_coding.php
+huffman_node *huffman_create_tree(uint64_t *freqs) {
     huffman_heap heap = {};
     for (int i = 0; i < 256; i++) {
-        huffman_heap_insert(&heap, huffman_node_create(i, freqs->arr[i], NULL, NULL));
+        huffman_node *node = huffman_node_create(i, freqs[i], NULL, NULL);
+        huffman_heap_insert(&heap, node);
     }
 
-    huffman_node left, right, new;
+    huffman_node *left, *right, *new;
     while (heap.size > 1) {
         left = huffman_heap_pop(&heap);
         right = huffman_heap_pop(&heap);
@@ -100,124 +113,122 @@ huffman_node huffman_create_tree(const huffman_freqs *freqs) {
     return huffman_heap_pop(&heap);
 }
 
-static void _find_codes_helper(huffman_codes* codes, huffman_node node, uint32_t code, uint8_t length) {
-    if (node == NULL) return;
-
+// Kasaa kooditaulukon etenemällä puussa rekursiivisesti. Viimeinen parametri
+// sisältää ylempänä muodostetun koodin. Kun saavutaan lapsisolmuun, koodi on 
+// valmis ja tallennetaan taulukkoon omalle paikalleen.
+static void _find_codes_helper(
+    huffman_code *codes, huffman_node *node, huffman_code current
+) {
     if (node->left == NULL && node->right == NULL) {
-        if (length > 32) {
-            printf("ERROR: too long code, must fix lol\n");
-            exit(1);
-        }
-
-        codes->code[node->byte] = code;
-        codes->length[node->byte] = length;
+        codes[node->byte].length = current.length;
+        memcpy(codes[node->byte].data, current.data, 32);
         return;
     }
-    
-    _find_codes_helper(codes, node->left, code, length+1);
-    code |= (1 << (31-length));
-    _find_codes_helper(codes, node->right, code, length+1);
+
+    current.length++;
+    _find_codes_helper(codes, node->left, current);
+    current.data[(current.length-1)/8] |= (1 << (256-current.length)%8);
+    _find_codes_helper(codes, node->right, current);
 }
 
-huffman_codes huffman_find_codes(huffman_node tree) {
-    huffman_codes codes;
-    _find_codes_helper(&codes, tree, 0, 0);
+// Palauttaa 256-paikkaisen taulukon, jossa on tavuja vastaavat koodaukset.
+// Yksittäisestä koodista on tallennettuna sen pituus bitteinä sekä
+// uint8_t[32]-tyyppinen taulukko, jossa bitit ovat järjestyksessä vasemmalta 
+// oikealle (merkitsevin vasemmalla). Käyttämättömät bitit jäävät nolliksi.
+huffman_code *huffman_find_codes(huffman_node *tree) {
+    huffman_code *codes = malloc(256*sizeof(huffman_code));
+    huffman_code current = {};
+    _find_codes_helper(codes, tree, current);
     return codes;
 }
 
-void huffman_write_tree(huffman_node node, bitwriter *writer) {
+// Kirjoittaa puun tiedostoon. Solmut tallennetaan syvyyshaun mukaisessa
+// järjestyksessä. Mikäli solmu on lehti, lisätään tiedostoon bitti 1 ja sen
+// perään solmua vastaava tavu (8 bittiä). Mikäli solmu on välisolmu,
+// kirjoitetaan vain bitti 0. Huffman-puu on täydellinen, eli jokainen
+// solmu on joko lehti tai sillä on kaksi lapsisolmua.
+void huffman_write_tree(bitwriter *writer, huffman_node *node) {
     if (node->left == NULL) {
         bitwriter_write8(writer, 0b10000000, 1);
         bitwriter_write8(writer, node->byte, 8);
     } else {
         bitwriter_write8(writer, 0, 1);
-        huffman_write_tree(node->left, writer);
-        huffman_write_tree(node->right, writer);
+        huffman_write_tree(writer, node->left);
+        huffman_write_tree(writer, node->right);
     }
 }
 
-size_t huffman_write_data(FILE *file, huffman_codes *codes, bitwriter *writer) {
-    size_t total_bytes = 0;
-
-    size_t bytes_read;
-    uint8_t *buffer = malloc(BLOCK_SIZE);
-    fseek(file, 0, SEEK_SET);
-    do {
-        bytes_read = fread(buffer, 1, BLOCK_SIZE, file);
-        total_bytes += bytes_read;
-        
-        for (size_t i = 0; i < bytes_read; i++) {
-            bitwriter_write32(writer, codes->code[buffer[i]], codes->length[buffer[i]]);
-        }
-    } while(bytes_read);
-    free(buffer);
-
-    return total_bytes;
+// Kirjoittaa lähtötiedoston tavut annettuin huffman-koodein ilmaistuna
+void huffman_write_data(bitwriter *writer, FILE *in_file, huffman_code *codes) {
+    bytereader reader = bytereader_init(in_file, 0);
+    while (reader.bytes_left) {
+        uint8_t byte = bytereader_read(&reader);
+        bitwriter_write(writer, codes[byte].data, codes[byte].length);
+    }
+    bytereader_finish(&reader);
 }
 
-void huffman_encode(FILE *in, FILE *out) {
-    huffman_freqs freqs = huffman_read_frequencies(in);
-    huffman_node tree = huffman_create_tree(&freqs);
-    huffman_codes codes = huffman_find_codes(tree);
+// Luo pakatun tiedoston yllä kuvattujen funktioiden avulla. Tiedoston rakenne:
+//    alkuperäisen tiedoston koko 8 tavua
+//    käytetty Huffman-puu: 319 tavua 7 bittiä
+//    varsinainen data n, missä n on luonnollinen luku :)
+void huffman_encode(FILE *in_file, FILE *out_file) {
+    uint64_t original_size;
+    uint64_t *freqs = huffman_read_frequencies(in_file, &original_size);
+    huffman_node *tree = huffman_create_tree(freqs);
+    huffman_code *codes = huffman_find_codes(tree);
 
-    bitwriter writer = bitwriter_init(out, sizeof(uint64_t));
-    huffman_write_tree(tree, &writer);
-    uint64_t original_size = huffman_write_data(in, &codes, &writer);
+    fwrite(&original_size, sizeof(uint64_t), 1, out_file);
+    
+    bitwriter writer = bitwriter_init(out_file, sizeof(uint64_t));
+    huffman_write_tree(&writer, tree);
+    huffman_write_data(&writer, in_file, codes);
     bitwriter_finish(&writer);
 
-    fseek(out, 0, SEEK_SET);
-    fwrite(&original_size, sizeof(uint64_t), 1, out);
-
-    huffman_destroy_tree(tree);
+    free(codes);
+    huffman_tree_destroy(tree);
+    free(freqs);
 }
+/*****************************************************************************/
 
-huffman_node huffman_read_tree(bitreader *reader) {
+// Lukee aiemmin tallennetun Huffman-puun rekursiviisesti. Tallennuksen periaate 
+// on kuvattu huffman_write_tree-metodin yhteydessä.
+huffman_node *huffman_read_tree(bitreader *reader) {
     uint8_t is_leaf = bitreader_read8(reader, 1);
     if (is_leaf) {
         uint8_t byte = bitreader_read8(reader, 8);
         return huffman_node_create(byte, 0, NULL, NULL);
     } else {
-        huffman_node left = huffman_read_tree(reader);
-        huffman_node right = huffman_read_tree(reader);
+        huffman_node *left = huffman_read_tree(reader);
+        huffman_node *right = huffman_read_tree(reader);
         return huffman_node_create(0, 0, left, right);
     }
-    return NULL;
 }
 
-uint8_t huffman_tree_get(huffman_node node, uint32_t code, uint8_t *depth) {
+// Purkaa tiedoston seuraavan koodin ja palauttaa sitä vastaavan tavun.
+// Ykkösbitillä siirrytään puussa oikealle ja nollabitillä vasemmalle, kun
+// päädytään lehteen, on purettu tavu lehden arvo.
+uint8_t huffman_read_code(bitreader *reader, huffman_node *node) {
     if (node->left == NULL && node->right == NULL) {
         return node->byte;
     }
-    
-    *depth += 1;
-    if (code & (1<<31)) {
-        return huffman_tree_get(node->right, code << 1, depth);
+
+    if (bitreader_read8(reader, 1)) {
+        return huffman_read_code(reader, node->right);
     } else {
-        return huffman_tree_get(node->left, code << 1, depth);
+        return huffman_read_code(reader, node->left);
     }
 }
 
-void huffman_decode_data(FILE *out_file, uint64_t byte_count, huffman_node tree, bitreader *reader) {
-    size_t current_byte = 0;
-    uint8_t *buffer = malloc(BLOCK_SIZE);
-
-    uint32_t code = bitreader_read32(reader, 32);
-    for (uint64_t i = 0; i < byte_count; i++) {
-        uint8_t depth = 0;
-        uint8_t byte = huffman_tree_get(tree, code, &depth);
-
-        buffer[current_byte++] = byte;
-        if (current_byte == BLOCK_SIZE) {
-            fwrite(buffer, 1, BLOCK_SIZE, out_file);
-            current_byte = 0;
-        }
-
-        code = code << depth;
-        code |= bitreader_read32(reader, depth) >> (32-depth);
+// Lukee huffman-koodin annetun puun avulla ja kirjoittaa tuloksen tiedostoon.
+void huffman_decode_data(
+    bitreader *reader, FILE *out_file, uint64_t byte_count, huffman_node *tree
+) {
+    bytewriter writer = bytewriter_init(out_file, 0);
+    while (byte_count--) {
+        bytewriter_write(&writer, huffman_read_code(reader, tree));
     }
-
-    fwrite(buffer, 1, current_byte, out_file);
-    free(buffer);
+    bytewriter_finish(&writer);
 }
 
 void huffman_decode(FILE *in_file, FILE *out_file) {
@@ -226,6 +237,7 @@ void huffman_decode(FILE *in_file, FILE *out_file) {
     fread(&original_size, sizeof(uint64_t), 1, in_file);
 
     bitreader reader = bitreader_init(in_file, sizeof(uint64_t));
-    huffman_node tree = huffman_read_tree(&reader);
-    huffman_decode_data(out_file, original_size, tree, &reader);
-}   
+    huffman_node *tree = huffman_read_tree(&reader);
+    huffman_decode_data(&reader, out_file, original_size, tree);
+    bitreader_finish(&reader);
+}
