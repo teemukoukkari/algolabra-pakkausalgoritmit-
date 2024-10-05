@@ -8,12 +8,16 @@
 ## Q&A
 
 Mitä olen tehnyt tällä viikolla? / Miten ohjelma on edistynyt?
-> Testasin LZW:n kohdalla taulukon nollaamista sen sijaan, että yksinkertaisesti lopetetaan koodien lisääminen, kun enimmäismäärä täyttyy. Tällä ei ollut juuri merkitystä suuntaan tai toiseen. Korjasin myös pienen bugin, joka paransi pakkaustehoa hieman.
-
-> Viikon varsinainen edistys tapahtui yksikkötestien ja dokumentaation saralla - kirjoitin noin 40 yksikkötestiä, jotka testaavat kaikkia funktoita suhteellisen kattavasti. Muutin kaikki kommentit Doxygen-muotoon. Muokkasin pääohjelmaa siten, että se tulostaa pakkaustuloksen ja suoritusajan. Lisäksi kirjoitin [testausdokumentin](testausdokumentti.md) hyvälle mallille.
+* LZW:n kokeilua siten, että koodien lisäämisen lopettamisen sijaan tyhjennetään taulukko. Ei juuri merkitystä suuntaan tai toiseen, mutta samassa löysin bugin, jonka korjaaminen paransi pakkaustehoa hieman.
+* Noin 40 suhteellisen monipuolisen yksikkötestin kirjoittaminen
+* Kaikki kommentit Doxygen-muotoon
+* Pääohjelma tulostaa pakkaustuloksen ja suoritusajan.
+* [Testausdokumentti](testausdokumentti.md) lähes valmiiksi.
 
 Mikä jäi epäselväksi tai on tuottanut vaikeuksia?
-> Ei mainitsemisen arvoista.
+* Ei mainitsemisen arvoista.
 
 Mitä teen seuraavaksi?
-> Algoritmien vertailu ja pakkaustehon tutkiminen vielä muutamalla lisäsyötteellä. Toteutusdokumentin kirjoittaminen.
+* Algoritmien vertailu ja pakkaustehon tutkiminen vielä muutamalla lisäsyötteellä.
+* Toteutusdokumentin kirjoittaminen.
+* Koodin viimeistely
