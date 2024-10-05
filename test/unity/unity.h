@@ -9,6 +9,8 @@
 #define UNITY_FRAMEWORK_H
 #define UNITY
 
+#define UNITY_INCLUDE_DOUBLE
+
 #define UNITY_VERSION_MAJOR    2
 #define UNITY_VERSION_MINOR    6
 #define UNITY_VERSION_BUILD    0

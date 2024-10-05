@@ -6,6 +6,12 @@
 #define FILE_BUFFER_SIZE 16384
 
 /*****************************************************************************/
+typedef struct compress_result {
+    size_t size_before;
+    size_t size_after;
+} compress_result;
+
+/*****************************************************************************/
 
 typedef struct bytewriter {
     FILE *file;
@@ -35,7 +41,6 @@ void bytereader_finish(bytereader *reader);
 
 /*****************************************************************************/
 
-
 typedef struct bitwriter {
     FILE *file;
     uint8_t *buffer;
@@ -46,9 +51,9 @@ typedef struct bitwriter {
 
 bitwriter bitwriter_init(FILE *file, size_t start_pos);
 void bitwriter_write8(bitwriter *writer, uint8_t data, uint8_t count);
-void bitwriter_write(bitwriter *writer, uint8_t *data, uint8_t count);
+void bitwriter_write(bitwriter *writer, const uint8_t *data, uint8_t count);
 void bitwriter_write16r(bitwriter *writer, uint16_t data, uint8_t count);
-void bitwriter_finish(bitwriter *writer);
+size_t bitwriter_finish(bitwriter *writer);
 
 /*****************************************************************************/
 

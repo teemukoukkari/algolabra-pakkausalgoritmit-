@@ -10,9 +10,9 @@
 #define LZW_NULL (uint16_t)(-1)
 #define LZW_EOF 256
 
-#define LZW_CODEWORD_LENGTH_LIMIT 12
-#define LZW_CODEWORD_COUNT (1 << LZW_CODEWORD_LENGTH_LIMIT)
-#define LZW_DICT_SIZE (1<<16)
+#define LZW_CODEWORD_LENGTH_LIMIT 14
+#define LZW_CODEWORD_COUNT (1 << LZW_CODEWORD_LENGTH_LIMIT)-2
+#define LZW_DICT_SIZE (1<<16) // max 2^16
 
 /*****************************************************************************/
 
@@ -32,14 +32,8 @@ lzw_dict lzw_dict_init();
 void lzw_dict_destroy(lzw_dict *dict);
 
 uint32_t lzw_dict_hash(uint16_t prefix, uint8_t token);
-
-uint16_t lzw_dict_get(
-    lzw_dict *dict, uint16_t prefix, uint8_t token, uint32_t *free_pos
-);
-
-void lzw_dict_insert(
-    lzw_dict *dict, uint16_t prefix, uint8_t token, uint32_t free_pos
-);
+uint16_t lzw_dict_get(lzw_dict *dict, uint16_t prefix, uint8_t token, uint32_t *free_pos);
+void lzw_dict_insert(lzw_dict *dict, uint16_t prefix, uint8_t token, uint32_t free_pos);
 
 /*****************************************************************************/
 
@@ -62,5 +56,5 @@ uint8_t lzw_table_print(lzw_table *table, bytewriter *writer, uint16_t entry);
 
 /*****************************************************************************/
 
-void lzw_encode(FILE *in_file, FILE *out_file);
-void lzw_decode(FILE *in_file, FILE *out_file);
+compress_result lzw_compress(FILE *in_file, FILE *out_file);
+void lzw_decompress(FILE *in_file, FILE *out_file);

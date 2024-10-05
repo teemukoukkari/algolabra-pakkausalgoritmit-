@@ -4,29 +4,19 @@
 #include <stdbool.h>
 #include "util.h"
 
-/******************************************************************************
-* LZW-pakkausalgoritmia varten tarvitaan hajautustaulu, jonka avaimet ovat
-* merkkijonoja ja arvot lisäysjärjestyksessä kasvavia kokonaislukuja (koodeja).
-*
-* Algoritmin luonteesta johtuen jokainen avainmerkkijono koostuu aina jostakin
-* aiemmin lisätystä merkkijonosta ja yhdestä uudesta merkistä. Siten avaimina
-* voidaan käyttää (prefix, token)-pareja, missä prefix on aiemmin lisättyä
-* merkkijonoa vastaava (uniikki) koodi ja token perään lisättävä merkki.  
-*
-* Tämän lisäksi hajautustaulu tarjoaa tiedon siitä, kuinka monta bittiä
-* suurimman tallennetun koodin esittämiseen tarvitaan (code_length) sekä
-* varmistaa, ettei liian suuria arvoja lisätä (LZW_CODEWORD_LENGTH_LIMIT) 
-*/
+/*****************************************************************************/
 
-// Alustaa hajautustaulun LZW-algoritmia varten. Tauluun lisätään valmiiksi
-// avaimille (LZW_NULL,0-255) koodit 0-255. Lisäksi koodi LZW_EOF=256 varataan
+/**
+ * @brief Initializes a new dictionary for LZW compressing. Codes 0-255 are
+ *        added for keys (LZW_NULL, 0-255). In addition, LZW_EOF=256 is reserved.
+ * @return The dictionary. Caller must free the memory using lzw_dict_destroy.
+ */
 lzw_dict lzw_dict_init() {
     lzw_dict dict = {
         .size = 0,
         .code_length = 9,
         .arr = malloc(LZW_DICT_SIZE*sizeof(lzw_dict_node))
     };
-
     for (size_t i = 0; i < LZW_DICT_SIZE; i++) {
         dict.arr[i].value = LZW_NULL;
     }
@@ -35,7 +25,6 @@ lzw_dict lzw_dict_init() {
         lzw_dict_insert(&dict, LZW_NULL, i, LZW_NULL);
     }
     dict.size += 1; // LZW_EOF=256
-
     return dict;
 }
 
@@ -43,37 +32,46 @@ void lzw_dict_destroy(lzw_dict *dict) {
     free(dict->arr);
 }
 
-// Hajautusfunktio. Osoittautui empiirisellä testauksella erittäin tehokkaaksi
-// juuri tässä käyttötarkoituksessa. djb2-funktion taikaluku 33 toimii yhä!
+/**
+ * @brief Hash function. Simply the best for our use case.
+ */
 uint32_t lzw_dict_hash(uint16_t prefix, uint8_t token) {
-    return 33 * (prefix*256 + token);
+    return  prefix*256 + token;
 }
 
-// Hakee arvon hajautustaulusta käyttäen lineaarista kokeilua, mikäli hajautus-
-// arvon kohdalla on sattunut yhteentörmäys. Jos avainta ei löydy taulusta,
-// palautetaan LZW_NULL_INDEX ja kohta, johon tämä voidaan lisätä (free_pos).
-uint16_t lzw_dict_get(
-    lzw_dict *dict, uint16_t prefix, uint8_t token, uint32_t *free_pos
-) {
+/**
+ * @brief Finds a code from the hash table using (prefix, token)-key, applying
+ *        lzw_dict_hash function and linear probing.
+ * @param dict Pointer to the dictionary.
+ * @param prefix Prefix part of the key. For example key "abcd" -> code of "abc"
+ * @param token Token part of the key. For example key "abcd" -> char 'd'
+ * @param free_pos Pointer to where the potential position for the key will be
+ *                 stored in case the key is not already in the dictionary.
+ * @returns The code or LZW_NULL if the key is not in the dictionary.
+ */
+uint16_t lzw_dict_get(lzw_dict *dict, uint16_t prefix, uint8_t token, uint32_t *free_pos) {
     uint32_t pos = lzw_dict_hash(prefix, token) % LZW_DICT_SIZE;
-
     while (true) {
-        if (dict->arr[pos].prefix == prefix && dict->arr[pos].token == token) {
-            return dict->arr[pos].value;
-        } else if (dict->arr[pos].value == LZW_NULL) {
+        if (dict->arr[pos].value == LZW_NULL) {
             *free_pos = pos;
             return LZW_NULL;
         }
+        if (dict->arr[pos].prefix == prefix && dict->arr[pos].token == token) {
+            return dict->arr[pos].value;
+        } 
         pos = (pos + 1) % LZW_DICT_SIZE;
     }
 }
 
-// Lisää tauluun järjestyksessä seuraavan koodin annetulle avaimelle. Mikäli
-// koodien enimmäismäärä on saavutettu, ei tehdä mitään. Viimeinen parametri
-// voi olla hakufunktion palauttama free_pos tai LZW_NULL_INDEX. 
-void lzw_dict_insert(
-    lzw_dict *dict, uint16_t prefix, uint8_t token, uint32_t free_pos
-) {
+/**
+ * @brief Inserts the next code for given (prefix, token) key. The key MUST BE
+ *        unique! If no codes left (LZW_CODEWORD_COUNT), does nothing.
+ * @param dict Pointer to the dictionary.
+ * @param prefix Prefix part of the key. For example key "abcd" -> code of "abc"
+ * @param token Token part of the key. For example key "abcd" -> char 'd'
+ * @param free_pos The free_pos from lzw_dict_get or LZW_NULL if not available.
+ */
+void lzw_dict_insert(lzw_dict *dict, uint16_t prefix, uint8_t token, uint32_t free_pos) {
     if (dict->size >= LZW_CODEWORD_COUNT) {
         return;
     }
@@ -91,21 +89,16 @@ void lzw_dict_insert(
     }
 }
 
-/******************************************************************************
-* LZW-purkualgoritmia varten tarvitaan merkkijonotaulukko. Algoritmin
-* luonteesta johtuen taulukko täytetään järjestyksessä siten, että jokainen uusi
-* arvo koostuu jostain aiemmin lisätystä jonosta ja yhdestä uudesta merkistä.
-* Siten kokonaisten merkkijonojen sijaan riittää tallentaa tieto, mitä aiempaa
-* merkkijonoa (prefix) käytetään alkuosana ja mikä merkki (token) lisätään.
-* Tämäkin rakenne pitää kirjaa siitä, miten monta bittiä tarvitaan koodien
-* esittämiseen (code_length) ja varmistaa, että enimmäismäärää ylitetä.
-*/
+/*****************************************************************************/
 
-// Alustaa taulukon siten, että koodeja 0-255 vastaavat yhden merkin jonot
-// (LZW_NULL, 0-255). Lisäksi paikka 256 varateen LZW_EOF-käyttöä varten
+/**
+ * @brief Initializes a new lookup table for LZW decompressing. Codes
+ *        (LZW_NULL, 255) are added for keys 0-255. Code LZW_EOF=256 is reversed.
+ * @return The lookup table. Caller must free the memory using lzw_table_destroy.
+ */
 lzw_table lzw_table_init() {
     lzw_table table = {
-        .size = 257,
+        .size = 257, 
         .code_length = 9,
         .arr = calloc(1, sizeof(lzw_table_node)*LZW_CODEWORD_COUNT)
     };
@@ -118,8 +111,17 @@ lzw_table lzw_table_init() {
     return table;
 }
 
-// Tulostaa tallennetun merkkijonon rekursiivisesti.
-// Palauttaa jonon ensimmäisen '¨merkin myöhempää käyttöä varten.
+void lzw_table_destroy(lzw_table *table) {
+    free(table->arr);
+}
+
+/**
+ * @brief Prints a string from lookup table recursively.
+ * @param lzw_table Pointer to the lookup table.
+ * @param writer Bytewriter handle to write the bytes to.
+ * @param entry The lookup table entry (=code) to print.
+ * @return The first byte of the code for later use.
+ */
 uint8_t lzw_table_print(lzw_table *table, bytewriter *writer, uint16_t entry) {
     uint8_t res = entry;
     if (entry > 255) {
@@ -129,7 +131,12 @@ uint8_t lzw_table_print(lzw_table *table, bytewriter *writer, uint16_t entry) {
     return res;
 }
 
-// Lisää annetun merkkijonon seuraavan koodin arvoksi, mikäli tilaa on.
+/**
+ * @brief Inserts the given string to lookup table for next code
+ * @param lzw_table Pointer to the lookup table.
+ * @param prefix Prefix part of the string. For example key "abcd" -> code of "abc"
+ * @param token Token part of the string. For example key "abcd" -> char 'd'
+ */
 void lzw_table_insert(lzw_table *table, uint16_t prefix, uint8_t token) {
     if (table->size >= LZW_CODEWORD_COUNT) {
         return;
@@ -144,35 +151,31 @@ void lzw_table_insert(lzw_table *table, uint16_t prefix, uint8_t token) {
     }
 }
 
-void lzw_table_destroy(lzw_table *table) {
-    free(table->arr);
-}
+/*****************************************************************************/
 
-/******************************************************************************
-* Pakkaus- ja purkualgormit perustuvat pääosin sivulla
-*   https://www.geeksforgeeks.org/lzw-lempel-ziv-welch-compression-technique/
-* kuvattuun toimintalogiikkaan ja pseudokoodiin.
-* 
-* Suurin poikkeama lienee koodin pituuden mukauttaminen, sillä alkuun on niin
-* vähän koodeja, että 9-bittiset esitykset riittävät. Pituutta kasvatetaan
-* aina, kun on mahdollisisuus, että seuraava koodi vaati pidemmän esityksen.
-* Pisin käytettävä koodi on 12 bittiä, tämän jälkeen uusia ei enää lisätä.
-*/
-
-void lzw_encode(FILE *in_file, FILE *out_file) {
+/**
+ * @brief Compresseses a file using LZW algorithm
+ * @param in_file Source file
+ * @param out_file Destination file
+ * @return returns original and compressed size
+ */
+compress_result lzw_compress(FILE *in_file, FILE *out_file) {
     bytereader reader = bytereader_init(in_file, 0);
     bitwriter writer = bitwriter_init(out_file, 0);
 
     if (!reader.bytes_left) {
+        bitwriter_write16r(&writer, LZW_EOF, 9);
         bitwriter_finish(&writer);
         bytereader_finish(&reader);
-        return;
+        return (compress_result) { 0, 0 };
     }
 
     lzw_dict dict = lzw_dict_init();
     uint16_t last_code = bytereader_read(&reader);
 
+    size_t original_size = 1;
     while (reader.bytes_left) {
+        original_size++;
         uint8_t token = bytereader_read(&reader);
 
         uint32_t free_pos = 0;
@@ -188,20 +191,30 @@ void lzw_encode(FILE *in_file, FILE *out_file) {
 
     bitwriter_write16r(&writer, last_code, dict.code_length);
     bitwriter_write16r(&writer, LZW_EOF, dict.code_length);
-    
+    size_t compressed_size = bitwriter_finish(&writer);
+
     lzw_dict_destroy(&dict);
-    bitwriter_finish(&writer);
     bytereader_finish(&reader);
+
+    return (compress_result) {
+        .size_before = original_size,
+        .size_after = compressed_size
+    };
 }
 
-void lzw_decode(FILE *in_file, FILE *out_file) {
+/**
+ * @brief Deompresses a file using LZW algorithm
+ * @param in_file Source file
+ * @param out_file Destination file
+ */
+void lzw_decompress(FILE *in_file, FILE *out_file) {
     bitreader reader = bitreader_init(in_file, 0);
     bytewriter writer = bytewriter_init(out_file, 0);
     
     lzw_table table = lzw_table_init();
     
     uint16_t last_code = bitreader_read16r(&reader, table.code_length);
-    if (last_code == LZW_NULL) {
+    if (last_code == LZW_EOF) {
         bytewriter_finish(&writer);
         bitreader_finish(&reader);
         return;
@@ -209,22 +222,22 @@ void lzw_decode(FILE *in_file, FILE *out_file) {
     uint8_t last_first_char = lzw_table_print(&table, &writer, last_code);
 
     while (true) {
-        uint16_t index = bitreader_read16r(&reader, table.code_length);
-        if (index == LZW_EOF) {
+        uint16_t code = bitreader_read16r(&reader, table.code_length);
+        if (code == LZW_EOF) {
             break;
         }
 
         uint8_t first_char;
-        if (table.size <= index) {
+        if (table.size <= code) {
             first_char = lzw_table_print(&table, &writer, last_code);
             lzw_table_print(&table, &writer, last_first_char);
         } else {
-            first_char = lzw_table_print(&table, &writer, index);
+            first_char = lzw_table_print(&table, &writer, code);
         }
 
         lzw_table_insert(&table, last_code, first_char);
 
-        last_code = index;
+        last_code = code;
         last_first_char = first_char;
     }
 

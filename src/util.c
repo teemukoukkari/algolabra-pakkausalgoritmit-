@@ -7,7 +7,12 @@
 
 /*****************************************************************************/
 
-// Kokonaisten tavujen kirjoittamiseen tarkoitettu puskuroiva apuväline.
+/**
+ * @brief Creates an instance of bytewriter for writing whole bytes.
+ * @param file Output file.
+ * @param start_pos Byte number from which to start
+ * @return A bytewriter instance. Caller must free using bytewriter_destroy.
+ */
 bytewriter bytewriter_init(FILE *file, size_t start_pos){
     bytewriter writer = {
         .file = file,
@@ -18,7 +23,11 @@ bytewriter bytewriter_init(FILE *file, size_t start_pos){
     return writer;
 }
 
-// Kirjoittaa tavun tiedostoon ja tarvittaessa tallentaa ja tyhjentää puskurin.
+/**
+ * @brief Write a byte to the output file.
+ * @param writer Bytewriter instance.
+ * @param byte The byte to write.
+ */
 void bytewriter_write(bytewriter *w, uint8_t byte) {
     w->buffer[w->current_byte++] = byte;
     if (w->current_byte == FILE_BUFFER_SIZE) {
@@ -29,7 +38,10 @@ void bytewriter_write(bytewriter *w, uint8_t byte) {
     }
 }
 
-// Tallentaa ja vapauttaa puskurin.
+/**
+ * @brief Flushes the buffer and frees memory
+ * @param writer Bytewriter instance.
+ */
 void bytewriter_finish(bytewriter *w) {
     fseek(w->file, w->block_first, SEEK_SET);
     fwrite(w->buffer, 1, w->current_byte, w->file);
@@ -38,7 +50,12 @@ void bytewriter_finish(bytewriter *w) {
 
 /*****************************************************************************/
 
-// Kokonaisten tavujen lukuemiseen tarkoitettu puskuroiva apuväline.
+/**
+ * @brief Creates an instance of bytereader for reading whole bytes.
+ * @param file Input file.
+ * @param start_pos Byte number from which to start.
+ * @return A bytereader instance. Caller must free using bytereader_destroy.
+ */
 bytereader bytereader_init(FILE *file, size_t start_pos) {
     bytereader reader = {
         .file = file,
@@ -54,7 +71,11 @@ bytereader bytereader_init(FILE *file, size_t start_pos) {
     return reader;
 }
 
-// Palauttaa tiedoston seuraavan tavun ja tarvittaesa päivittää puskurin.
+/**
+ * @brief Read a byte from the input file.
+ * @param writer Byterader instance.
+ * @return The byte read.
+ */
 uint8_t bytereader_read(bytereader *r) {
     uint8_t byte = r->buffer[r->current_byte++];
     r->bytes_left--;
@@ -75,7 +96,12 @@ void bytereader_finish(bytereader *r) {
 
 /*****************************************************************************/
 
-// Ei-tavumuotoisen tiedon kirjoittamiseen tarkoitettu puskuroiva apuväline.
+/**
+ * @brief Creates an instance of bitwrititer for writing bit-level data.
+ * @param file Output file.
+ * @param start_pos Byte number from which to start
+ * @return A bitwriter instance. Caller must free using bitwriter_destroy.
+ */
 bitwriter bitwriter_init(FILE *file, size_t start_pos) {
     bitwriter writer = {
         .file = file,
@@ -87,14 +113,15 @@ bitwriter bitwriter_init(FILE *file, size_t start_pos) {
     return writer;
 }
 
-// Kirjoittaa enintään tavun verran bittejä tiedostoon.
-// Parametri data sisältää kirjoittettavat bitit siten, että tavusta count kpl
-//  merkitsevintä bittiä kirjoitetaan, merkitsevin ensimmäisenä.
+/**
+ * @brief Writes a maximum of 8 bits to the output file.
+ * @param data The bits to write. Leftmost (most significant) bits of the integer
+ *             are written from left to right.
+ * @param count The number of bits to write, 1-8.
+ */
 void bitwriter_write8(bitwriter *w, uint8_t data, uint8_t count) {
-    // Aluksi tallennetaan käsiteltävään tavuun niin monta bittiä, kuin mahtuu.
-    // Mikäli kaikki eivät mahdu, kirjoitetaan loput seuraavan puolelle.
-    w->buffer[w->current_byte] |= data >> w->current_bit;
-    if (w->current_bit + count > 8) {
+    w->buffer[w->current_byte] |= data >> w->current_bit; // first byte
+    if (w->current_bit + count > 8) { // some bits need to be written to another
         w->buffer[w->current_byte+1] = data << (8-w->current_bit);
     }
 
@@ -102,27 +129,25 @@ void bitwriter_write8(bitwriter *w, uint8_t data, uint8_t count) {
     if (w->current_bit >= 8) {
         w->current_byte++;
         w->current_bit -= 8;
-
-        // Mikäli puskuri täyttyy, se tallennetaan ja tyhjennetään.
-        // Viimeisenä on yksi ylimääräinen tavu sitä varten, jos kirjoittaminen
-        //  menisi seuraavan tavun puolelle puskurin ulkopuolelle.
-        // Keskeneräinen tavu siirretään ensimmäiseksi tyhjennyksen jälkeen.
         if (w->current_byte == FILE_BUFFER_SIZE) {
             fseek(w->file, w->block_first, SEEK_SET);
             fwrite(w->buffer, 1, FILE_BUFFER_SIZE, w->file);
             w->block_first += FILE_BUFFER_SIZE;
             w->current_byte = 0;
 
-            w->buffer[0] = w->buffer[FILE_BUFFER_SIZE];
+            w->buffer[0] = w->buffer[FILE_BUFFER_SIZE]; // "overflow byte"
             memset(w->buffer+1, 0, FILE_BUFFER_SIZE);
         }
     }
 }
 
-// Kirjoittaa count-muuttujan verran bittejä tiedostoon, enintään siis 256 kpl.
-// Bitit luetaan data-taulukosta siten, että vasemmaisin/merkitsevin 
-//  kirjoitetaan ensimmäisenä. Ylimääräisten bittien tulee olla nollia.
-void bitwriter_write(bitwriter *w, uint8_t *data, uint8_t count) {
+/**
+ * @brief Writes a maximum of 256 bits to the output file.
+ * @param data The bits to write. First integers of the array, and the most
+ *             significant bits of the integers are written first.
+ * @param count The number of bits to write, 1-256.
+ */
+void bitwriter_write(bitwriter *w, const uint8_t *data, uint8_t count) {
     uint8_t current_byte = 0;
 
     while (count > 0) {
@@ -136,30 +161,36 @@ void bitwriter_write(bitwriter *w, uint8_t *data, uint8_t count) {
     }
 }
 
-// Kirjoittaa enintään 16 bittiä tiedostoon.
-// Kirjoitettavat bitit ovat data-parametrissa siten,
-//  vähiten merkitsevät count kpl kirjoitetaan, näistä merkitsevin ekana
-// Käyttämättömien bittien tulee olla nollia.
+/**
+ * @brief Writes 9-16 bits to the output file.
+ * @param data The bits to write. The rightmost (least significant) bits of the
+ *             integer are written from left to right.
+ * @param count The number of bits to write, 9-16.
+ */
 void bitwriter_write16r(bitwriter *w, uint16_t data, uint8_t count) {
-    if (count >= 8) {
-        bitwriter_write8(w, data >> (count-8), 8);
-        bitwriter_write8(w, data << (16-count), count-8);
-    } else {
-        printf("ERROR bitwriter_write16r");
-        exit(1);
-    }
+    bitwriter_write8(w, data >> (count-8), 8);
+    bitwriter_write8(w, data << (16-count), count-8);
 }
 
-// Tyhjentää ja vapauttaa puskurin. Jos tavu jäi kesken, täytetään se nollilla.
-void bitwriter_finish(bitwriter *w) {
+/**
+ * @brief Flushes the buffer and frees memory
+ * @param writer Bytewriter instance.
+ */
+size_t bitwriter_finish(bitwriter *w) {
     fseek(w->file, w->block_first, SEEK_SET);
     fwrite(w->buffer, 1, w->current_byte + (w->current_bit ? 1 : 0), w->file);
     free(w->buffer);
+    return w->block_first + w->current_byte + (w->current_bit ? 1 : 0);
 }
 
 /*****************************************************************************/
 
-// Ei-tavumuotoisen tiedon lukemiseen tarkoitettu puskuroiva apuväline.
+/**
+ * @brief Creates an instance of bitreader for reading bit-level data.
+ * @param file Input file.
+ * @param start_pos Byte number from which to start
+ * @return A bitreader instance. Caller must free using bitreader_destroy.
+ */
 bitreader bitreader_init(FILE *file, size_t start_pos) {
     bitreader reader = {
         .file = file,
@@ -175,25 +206,23 @@ bitreader bitreader_init(FILE *file, size_t start_pos) {
     return reader;
 }
 
-// Lukee enintään tavun verran bittejä tiedostosta, yhteensä count kpl.
-// Pyydetyt bitit ovat palautusarvon merkitsevimmät, loput jätetään nolliksi.
+/**
+ * @brief Reads a maximum of 8 bits from the input file.
+ * @param count The number of bits to read.
+ * @return The bits read. The bits are stored from left to right in the leftmost
+ *         (most significant) bits of the integer.
+ */
 uint8_t bitreader_read8(bitreader *r, uint8_t count) {
-    // Luetaan nykyisen tavun puolella olevat bitit valmiiksi oikeaan kohtaan.
-    uint8_t result = r->buffer[r->current_byte] << r->current_bit;
-    if (r->current_bit + count > 8) {
-        // Mikäli tässä ei ollut kaikki, luetaan loput seuraavasta tavusta
+    uint8_t result = r->buffer[r->current_byte] << r->current_bit; // first byte
+    if (r->current_bit + count > 8) { // some bits need to be read from another
         result |= r->buffer[r->current_byte+1] >> (8-r->current_bit);
     }
-    // Varmistetaan vielä, että palautettavat ylimääräiset bitit ovat nollia.
-    result &= (0xFF << (8-count));
+    result &= (0xFF << (8-count)); // Make sure that the excess bits are zeros.
 
     r->current_bit += count;
     if (r->current_bit >= 8) {
         r->current_byte++;
         r->current_bit-=8;
-
-        // Puskurissa pidetään aina myös yhtä ylimääräistä tavua, sillä luku
-        //  saattaa mennä tavurajan yli.
         if (r->current_byte == FILE_BUFFER_SIZE) {
             r->block_first += FILE_BUFFER_SIZE;
             fseek(r->file, r->block_first, SEEK_SET);
@@ -205,15 +234,17 @@ uint8_t bitreader_read8(bitreader *r, uint8_t count) {
     return result;
 }
 
+
+/**
+ * @brief Reads 9-16 bits from the input file.
+ * @param count The number of bits to read, 9-16.
+ * @return The bits read. The rightmost (least significant) bits of the integer
+ *         are used, from left to right.
+ */
 uint16_t bitreader_read16r(bitreader *r, uint8_t count) {
-    if (count >= 8) {
-        uint16_t res = bitreader_read8(r, 8) << (count-8);
-        res |= bitreader_read8(r, count-8) >> (16-count);
-        return res;
-    } else {
-        printf("ERROR bitreader_read16r");
-        exit(1);
-    }
+    uint16_t res = bitreader_read8(r, 8) << (count-8);
+    res |= bitreader_read8(r, count-8) >> (16-count);
+    return res;
 }
 
 void bitreader_finish(bitreader* r) {
