@@ -241,7 +241,7 @@ void huffman_decode_data(bitreader *reader, FILE *out_file, uint64_t byte_count,
 }
 
 /**
- * @brief Compresseses a file using LZW algorithm
+ * @brief Compresseses a file using Huffman encoding
  * @param in_file Source file
  * @param out_file Destination file
  * @return returns original and compressed size
@@ -270,7 +270,7 @@ compress_result huffman_compress(FILE *in_file, FILE *out_file) {
 }
 
 /**
- * @brief Deompresses a file using LZW algorithm
+ * @brief Decompresses a file using Huffman encoding
  * @param in_file Source file
  * @param out_file Destination file
  */

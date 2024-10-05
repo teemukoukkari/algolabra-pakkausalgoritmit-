@@ -203,7 +203,7 @@ compress_result lzw_compress(FILE *in_file, FILE *out_file) {
 }
 
 /**
- * @brief Deompresses a file using LZW algorithm
+ * @brief Decompresses a file using LZW algorithm
  * @param in_file Source file
  * @param out_file Destination file
  */

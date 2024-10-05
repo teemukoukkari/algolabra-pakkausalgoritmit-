@@ -53,7 +53,7 @@ Molempia algoritmeja testataan yksikkötesteissä seuraavilla tiedostoilla:
 - **pride_and_prejudice.txt** - Ylpeys ja ennakkoluulo -kirja UTF8-koodattuna tekstitiedostona. Tämän osalta testataan myös pakkaussuhde.
 
 ## Testaus todenmukaisilla syötteillä
-Pakkaussuhde on tässä pakatun tiedoston koko suhteessa pakkaamattomaan tiedoston kokoon. Käyetyllä kiintolevyllä (SSD vs HDD) ero on merkittävä, suoritusajat ovat nopeammalla SSD-levyllä. Kaikissa tapauksissa on varmistettu, että tiedosto pysyi samana.
+Pakkaussuhde on tässä pakatun tiedoston koko suhteessa pakkaamattomaan tiedoston kokoon. Käytetyllä kiintolevyllä (SSD vs HDD) ero on merkittävä, suoritusajatt tössö ovat nopeammalla SSD-levyllä. Kaikissa tapauksissa on varmistettu, että tiedosto pysyi samana.
 
 **Romeo and Juliet -kirja UTF8-muodossa (161K)**
 ||Huffman|LZW|
@@ -74,4 +74,11 @@ Pakkaussuhde on tässä pakatun tiedoston koko suhteessa pakkaamattomaan tiedost
 |-|-|-|
 |Pakkaussuhde|0.582|0.440|
 |Pakkausaika|56 ms|114 ms|
-|Purkuaika|111 ms|32 ms|
+|Purkuaika|111 ms|32 ms
+
+**Satunnaista dataa sisältävä tiedosto (1G)**
+||Huffman|LZW|
+|-|-|-|
+|Pakkaussuhde|1.000|1.437 [sic]|
+|Pakkausaika|10 443 ms|14 894 ms|
+|Purkuaika|24 687 ms|8 426 ms
