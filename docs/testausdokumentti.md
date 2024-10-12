@@ -55,26 +55,40 @@ Molempia algoritmeja testataan yksikkötesteissä seuraavilla tiedostoilla:
 ## Testaus todenmukaisilla syötteillä
 Pakkaussuhde on tässä pakatun tiedoston koko suhteessa pakkaamattomaan tiedoston kokoon. Käytetyllä kiintolevyllä (SSD vs HDD) ero on merkittävä, suoritusajatt tössö ovat nopeammalla SSD-levyllä. Kaikissa tapauksissa on varmistettu, että tiedosto pysyi samana.
 
-**Romeo and Juliet -kirja UTF8-muodossa (161K)**
+**Romeo and Juliet -kirja (englanninkielinen UTF-8) (161K)**
 ||Huffman|LZW|
 |-|-|-|
 |Pakkaussuhde|0.621|0.461|
 |Pakkausaika|1 ms|4 ms|
 |Purkuaika|4 ms|1 ms|
 
-**Pride and Prejudice -kirja UTF8-muodossa (740K)**
+**Pride and Prejudice -kirja (englanninkielinen UTF-8) (740K)**
 ||Huffman|LZW|
 |-|-|-|
 |Pakkaussuhde|0.573|0.420|
 |Pakkausaika|8 ms|19 ms|
 |Purkuaika|18 ms|5 ms|
 
-**King James Version -raamattu UTF8-muodossa (4.4M)**
+**King James Version -raamattu (englanninkielinen UTF-8) (4.4M)**
 ||Huffman|LZW|
 |-|-|-|
 |Pakkaussuhde|0.582|0.440|
 |Pakkausaika|56 ms|114 ms|
 |Purkuaika|111 ms|32 ms
+
+**Sota ja rauha e-kirja (suomenkielinen UTF-8) (870K)**
+||Huffman|LZW|
+|-|-|-|
+|Pakkaussuhde|0.567|0.0.441|
+|Pakkausaika|25 ms|73 ms|
+|Purkuaika|41 ms|15 ms|
+
+**Kiinankielinen e-kirja (UTF-8) (276K)**
+||Huffman|LZW|
+|-|-|-|
+|Pakkaussuhde|0.757|0.604|
+|Pakkausaika|7 ms|19 ms|
+|Purkuaika|15 ms|6 ms
 
 **Satunnaista dataa sisältävä tiedosto (1G)**
 ||Huffman|LZW|

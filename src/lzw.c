@@ -167,7 +167,10 @@ compress_result lzw_compress(FILE *in_file, FILE *out_file) {
         bitwriter_write16r(&writer, LZW_EOF, 9);
         bitwriter_finish(&writer);
         bytereader_finish(&reader);
-        return (compress_result) { 0, 0 };
+        return (compress_result) { 
+            .size_before = 0,
+            .size_after = 1
+        };
     }
 
     lzw_dict dict = lzw_dict_init();
