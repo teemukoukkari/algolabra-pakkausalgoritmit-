@@ -53,7 +53,7 @@ Molempia algoritmeja testataan yksikkötesteissä seuraavilla tiedostoilla:
 - **pride_and_prejudice.txt** - Ylpeys ja ennakkoluulo -kirja UTF8-koodattuna tekstitiedostona. Tämän osalta testataan myös pakkaussuhde.
 
 ## Testaus todenmukaisilla syötteillä
-Pakkaussuhde on tässä pakatun tiedoston koko suhteessa pakkaamattomaan tiedoston kokoon. Käytetyllä kiintolevyllä (SSD vs HDD) ero on merkittävä, suoritusajatt tössö ovat nopeammalla SSD-levyllä. Kaikissa tapauksissa on varmistettu, että tiedosto pysyi samana.
+Pakkaussuhde on tässä pakatun tiedoston koko suhteessa pakkaamattomaan tiedoston kokoon. Käytetyllä kiintolevyllä (SSD vs HDD) ero on merkittävä, suoritusajat ovat selvästi parempia SSD-levyllä. Kaikissa tapauksissa on lisäksi varmistettu, että tiedosto pysyi samana (**oikeellisuustestaus**).
 
 **Romeo and Juliet -kirja (englanninkielinen UTF-8) (161K)**
 ||Huffman|LZW|
@@ -79,7 +79,7 @@ Pakkaussuhde on tässä pakatun tiedoston koko suhteessa pakkaamattomaan tiedost
 **Sota ja rauha e-kirja (suomenkielinen UTF-8) (870K)**
 ||Huffman|LZW|
 |-|-|-|
-|Pakkaussuhde|0.567|0.0.441|
+|Pakkaussuhde|0.567|0.441|
 |Pakkausaika|25 ms|73 ms|
 |Purkuaika|41 ms|15 ms|
 
@@ -90,9 +90,30 @@ Pakkaussuhde on tässä pakatun tiedoston koko suhteessa pakkaamattomaan tiedost
 |Pakkausaika|7 ms|19 ms|
 |Purkuaika|15 ms|6 ms
 
+**Valtion budjettikatsaus (PDF) (5.29M)**
+||Huffman|LZW|
+|-|-|-|
+|Pakkaussuhde|0.992|1.355|
+|Pakkausaika|62 ms|80 ms|
+|Purkuaika|145 ms|39 ms|
+
+**Maisemakuva (JPG) (9.77M)**
+||Huffman|LZW|
+|-|-|-|
+|Pakkaussuhde|0.999|1.437|
+|Pakkausaika|101 ms|143 ms|
+|Purkuaika|243 ms|72 ms|
+
+**Äänitiedosto (wav) (1M)**
+||Huffman|LZW|
+|-|-|-|
+|Pakkaussuhde|0.847|1.001|
+|Pakkausaika|12 ms|40 ms|
+|Purkuaika|25 ms|6 ms|
+
 **Satunnaista dataa sisältävä tiedosto (1G)**
 ||Huffman|LZW|
 |-|-|-|
-|Pakkaussuhde|1.000|1.437 [sic]|
+|Pakkaussuhde|1.000|1.437|
 |Pakkausaika|10 443 ms|14 894 ms|
-|Purkuaika|24 687 ms|8 426 ms
+|Purkuaika|24 687 ms|8 426 ms|

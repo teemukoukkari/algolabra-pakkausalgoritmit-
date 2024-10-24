@@ -46,12 +46,14 @@ Testausdokumentissa on pakkaustehot taulukoituna eri testitiedostoille. Kaikkien
 
 Tiivistetysti algoritmien ero on käytännössä se, että Huffman luo koodit suoraan yksittäisten merkkien esiintymistiheyksistä ja LZW toistuvista merkkijonoista. Toisin sanoen Huffman toimii hyvin erityisesti, kun eri merkkejä esiintyy tiedostossa epätasaisesti - näin on usein luonnollisen kielen kohdalla. LZW puolestaan toimii hyvin, kun samat merkkijonot toistuvat usein - tämäkin usein luonnollisen kielen kohdalla.
 
+Testauksessa käy myös ilmi, että varsinainen pakattu data ei ikinä vie Huffmanin tapauksessa enempää tilaa kuin alkuperäinen, ja tälle löytyy myös matemaattinen perusta. LZW:llä pakattu tiedosto saattoi taas olla huomattavastikin suurempi kuin alkuperäinen, kun syötettin jo valmiiksi pakattu tiedostomuoto tai satunnaista dataa.
+
 Huffmanin algoritmissa kätetty puu täytyy kirjoittaa pakattuun tiedostoon, ja toteutuksessani tähän menee aina 320 tavua. Lisäksi tiedoston alkuun kirjoitetaan tiedoston koko, johon menee 8 tavua. LZW:n kohdalla tällaista ylimääräistä lisää ei ole lopetuskoodia (1-2 lisätavua) lukuunottamatta. Tällä voi olla huomattava vaikutus erityisesti pienien tiedostojen kohdalla, mutta nopeasti se käy suhteessa pieneksi.
 
 ## Työn mahdolliset puutteet ja ratkaisuehdotukset
 Huffmanin pakkauksessa tiedoston kokoa lisää hieman alkuun kirjoitettu tiedoston koko. Tämän voisi kenties hoitaa lyhemminkin luottaen, että kaikki tavut on luettu tiedoston loppuessa ja varmistaen, että viimeisen oikean bitin jälkeen ei tule enää todellista koodia vastaavaa dataa.
 
-LZW lopettaa sanakirjan täyttämisen, kun koodin maksimipituus tavoitetaan. Tämä voi aiheuttaa ongelmia, jos tiedoston alkuosa ei vastaa sisällöllisesti jatkoa. Ratkaisuna voisi olla sanakirjan tyhjentäminen sen täyttyessä.
+LZW lopettaa sanakirjan täyttämisen, kun koodin maksimipituus tavoitetaan. Tämä voi aiheuttaa ongelmia, jos tiedoston alkuosa ei vastaa sisällöllisesti jatkoa. Ratkaisuna voisi olla sanakirjan tyhjentäminen sen täyttyessä. Algoritmi voisi myös seurata pakkaustehoa, ja päättää sen perusteella, miten esimerkiksi sanakirjan tyhjentämisen osalta toimitaan - tämä parantaisi tulosta erityisetsi datalla, jossa ei juuri ole toisteisuutta.
 
 Yleisesti ohjelma on tällä hetkellä hyvin virheherkkä, eikä niitä käsitellä ollenkaan. Esimerkiksi jos purettavaksi annettu syöte on virheellinen, ohjelma todennäköisesti kaatuu tai tuottaa hiljaa virheellisen lopputuloksen. Jos kirjoittaminen keskeytyy, keskeneräinen tiedosto jää levylle. Edes malloc-operaatioiden onnistumista ei tarkisteta. Ratkaisuna olisi lisätä yleisesti varmistuksia ja näihin liittyviä virheilmoituksia koodiin sekä käsitellä virheet oikeaoppisesti.
 
