@@ -9,13 +9,13 @@ $ make build
 
 Testien ajaminen onnistuu komennolla
 ```
-make test
+$ make test -B
 ```
 
 Windowsille kääntämistä varten minulla ei ole valmista scriptia, mutta sen pitäisi olla suhteellisen yksinkertaista. Tarvittaessa voin myös tehdä suoritettavan exe-tiedoston valmiiksi.
 
 ## Ohjelman käyttäminen
-Ohjelman käytetään kaikessa yksinkertaisuudessaan näin:
+Ohjelmaa käytetään kaikessa yksinkertaisuudessaan näin:
 
 ```
 $ ./algolabra [compress/decompress] [huffman/lzw] [input file] [output file]

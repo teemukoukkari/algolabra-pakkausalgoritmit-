@@ -218,6 +218,7 @@ void lzw_decompress(FILE *in_file, FILE *out_file) {
     
     uint16_t last_code = bitreader_read16r(&reader, table.code_length);
     if (last_code == LZW_EOF) {
+        lzw_table_destroy(&table);
         bytewriter_finish(&writer);
         bitreader_finish(&reader);
         return;
@@ -244,6 +245,7 @@ void lzw_decompress(FILE *in_file, FILE *out_file) {
         last_first_char = first_char;
     }
 
+    lzw_table_destroy(&table);
     bytewriter_finish(&writer);
     bitreader_finish(&reader);
 }

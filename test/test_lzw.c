@@ -223,7 +223,7 @@ void test_lzw_table_print() {
     bytewriter_finish(&writer);
 
     fseek(file, 0, SEEK_SET);
-    uint8_t bytes[6+1];
+    uint8_t bytes[7+1];
     size_t byte_count = fread(bytes, 1, 7+1, file);
 
     TEST_ASSERT_EQUAL_UINT8(22, first_char);

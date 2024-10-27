@@ -1,10 +1,33 @@
+# Dokumentaatio
+
 [Määrittelydokumentti](docs/maarittelydokumentti.md)
 
 [Toteutusdokumentti](docs/toteutusdokumentti.md)
 
 [Testausdokumentti](docs/testausdokumentti.md)
 
-[Tiivis Käyttöohje](docs/kayttoohje.md)
+[Käyttöohje](docs/kayttoohje.md)
+
+# Käyttöohje
+Ohjelman kääntämisen ainoat riippuvuudet ovat GNU make ja gcc. Lähtökohtaisesti nämä löytyvät valmiiksi asennettuina kaikista linux-jakeluista.
+
+Ohjelman kääntäminen onnistuu juurihakemistossa komennolla
+```
+$ make build
+```
+
+Testien ajaminen onnistuu komennolla
+```
+$ make test -B
+```
+
+Ohjelmaa käytetään kaikessa yksinkertaisuudessaan näin:
+
+```
+$ ./algolabra [compress/decompress] [huffman/lzw] [input file] [output file]
+```
+
+# Viikkoraportit
 
 [Viikkoraportti 2](docs/viikko2.md)
 
